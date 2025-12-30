@@ -111,14 +111,19 @@ async def compare_fillet(
         res1 = await _analyze_single_fish(image1, float(length1))
         res2 = await _analyze_single_fish(image2, float(length2))
         
-        fw1 = res1.get("filletWeights", 0)
-        fw2 = res2.get("filletWeights", 0)
+        fw1 = res1.get("filletWeights", 0.0)
+        fw2 = res2.get("filletWeights", 0.0)
         
-        max_fish_name = res1["seafoodType"] if fw1 >= fw2 else res2["seafoodType"]
+        max_idx = 0 if fw1 >= fw2 else 1
+        max_weight_kg = fw1 if fw1 >= fw2 else fw2
+        
+        # portion is 200g based. input weight is kg.
+        portion = int((max_weight_kg * 1000) / 200)
         
         return {
             "fishes": [res1, res2],
-            "maxFIsh": max_fish_name
+            "maxFIsh": max_idx,
+            "portion": portion
         }
     except Exception as e:
          import traceback
