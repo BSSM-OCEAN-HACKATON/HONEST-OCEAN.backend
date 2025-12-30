@@ -30,4 +30,10 @@ class RecordDataResponse(BaseModel):
 
 class ResponseModel(BaseModel):
     status: str
-    data: dict | list | BaseModel
+    data: dict
+
+class PathRequest(BaseModel):
+    points: List[int]
+
+class PathResponse(BaseModel):
+    points: List[int]

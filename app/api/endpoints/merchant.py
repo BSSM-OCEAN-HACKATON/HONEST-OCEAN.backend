@@ -91,6 +91,17 @@ async def get_merchant_records(
         }
     }
 
+from app.schemas import PathRequest, PathResponse
+from app.services.path_service import calculate_best_path
+
+@router.post("/records/path", response_model=PathResponse)
+async def generate_best_path(
+    request: PathRequest,
+    db: Session = Depends(get_db)
+):
+    sorted_points = calculate_best_path(request.points, db)
+    return {"points": sorted_points}
+
 def _map_record_to_detail(r: MerchantRecord) -> dict:
     return {
         "recordId": str(r.id),
