@@ -100,3 +100,87 @@ async def analyze_fish(
             "status": "error",
             "data": {"message": str(e)}
         }
+@router.post("/compare_fillet")
+async def compare_fillet(
+    image1: UploadFile = File(...),
+    image2: UploadFile = File(...),
+    length1: int = Form(...),
+    length2: int = Form(...),
+):
+    try:
+        res1 = await _analyze_single_fish(image1, float(length1))
+        res2 = await _analyze_single_fish(image2, float(length2))
+        
+        fw1 = res1.get("filletWeights", 0)
+        fw2 = res2.get("filletWeights", 0)
+        
+        max_fish_name = res1["seafoodType"] if fw1 >= fw2 else res2["seafoodType"]
+        
+        return {
+            "fishes": [res1, res2],
+            "maxFIsh": max_fish_name
+        }
+    except Exception as e:
+         import traceback
+         traceback.print_exc()
+         raise HTTPException(status_code=500, detail=str(e))
+
+async def _analyze_single_fish(image: UploadFile, length_val: float) -> dict:
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(image.filename)[1]) as temp_file:
+            shutil.copyfileobj(image.file, temp_file)
+            temp_path = temp_file.name
+
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        
+        result_str = None
+        if openai_key and openai_key.strip():
+            result_str = analyze_with_gpt(temp_path, openai_key, fish_length=length_val)
+        elif gemini_key and gemini_key.strip():
+            result_str = analyze_with_gemini(temp_path, gemini_key, fish_length=length_val)
+        else:
+             raise HTTPException(status_code=500, detail="No API Key configured")
+        
+        clean_result = result_str.replace("```json", "").replace("```", "").strip()
+        data = json.loads(clean_result)
+        
+        # Ensure calculated fields
+        if "seafoodType" in data:
+            fish_name = data["seafoodType"]
+            
+            # Market Price
+            unit_price_per_kg = await get_market_price(fish_name)
+            est_weight_val = None
+            if "estimatedWeight" in data:
+                 try:
+                     est_weight_val = float(data["estimatedWeight"])
+                 except (ValueError, TypeError):
+                     pass
+            
+            if unit_price_per_kg is not None and est_weight_val is not None:
+                 total_price = unit_price_per_kg * est_weight_val
+                 data["marketPrice"] = int(total_price)
+            
+            # Regulations
+            from app.services.regulation_service import check_regulation
+            reg_result = check_regulation(fish_name, length_cm=length_val, weight_kg=est_weight_val)
+            data["currentlyForbidden"] = reg_result["forbidden"]
+            
+            # Fillet Yield
+            from app.services.fish_data import get_fillet_yield
+            yield_rate = get_fillet_yield(fish_name)
+            if est_weight_val:
+                fillet_weight = est_weight_val * yield_rate
+                data["filletWeights"] = round(fillet_weight, 2)
+            else:
+                 data["filletWeights"] = 0.0
+
+        return data
+
+    except Exception:
+        raise
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
