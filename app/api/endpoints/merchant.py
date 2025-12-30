@@ -56,7 +56,7 @@ from app.schemas import ResponseModel, Record, RecordDataResponse, RecordDetail
 
 # ... (imports remain)
 
-@router.get("/records", response_model=RecordDetail)
+@router.get("/record", response_model=RecordDetail)
 async def get_merchant_record_detail(
     id: str = Query(..., description="Record ID"),
     db: Session = Depends(get_db)
@@ -71,20 +71,43 @@ async def get_merchant_record_detail(
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
     
+    return _map_record_to_detail(record)
+
+@router.get("/records", response_model=ResponseModel)
+async def get_merchant_records(
+    page: Optional[int] = Query(1, ge=1),
+    size: Optional[int] = Query(10, ge=1),
+    db: Session = Depends(get_db)
+):
+    start = (page - 1) * size
+    records = db.query(MerchantRecord).offset(start).limit(size).all()
+    
+    mapped_records = [_map_record_to_detail(r) for r in records]
+    
     return {
-        "recordId": str(record.id),
-        "image": record.image_filename if record.image_filename else "",
-        "merchantWeight": str(record.merchant_weight),
+        "status": "success",
+        "data": {
+            "record": mapped_records
+        }
+    }
+
+def _map_record_to_detail(r: MerchantRecord) -> dict:
+    return {
+        "recordId": str(r.id),
+        "image": r.image_filename if r.image_filename else "",
+        "merchantWeight": str(r.merchant_weight),
         "data": {
             "location": {
-                "latitude": record.latitude,
-                "longitude": record.longitude
+                "latitude": r.latitude,
+                "longitude": r.longitude
             }
         },
         "stats": {
-            "seafoodType": record.seafood_type,
-            "marketPrice": record.market_price,
-            "estimatedWeight": record.estimated_weight
+            "seafoodType": r.seafood_type,
+            "marketPrice": r.market_price,
+            "estimatedWeight": r.estimated_weight,
+            # currentlyForbidden not stored in DB currently, returning None
+            "currentlyForbidden": None
         }
     }
 
