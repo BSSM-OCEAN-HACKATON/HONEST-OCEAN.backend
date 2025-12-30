@@ -48,6 +48,10 @@ async def analyze_fish(
                 # Map snake_case or whatever the LLM returned to our schema
                 # We requested specific keys in the prompt: seafoodType, marketPrice, estimatedWeight
                 # If LLM followed instructions, data is compatible with SeafoodStats
+
+                if data.get("is_fish") is False:
+                    # Return 400 Bad Request if not a fish
+                    raise HTTPException(status_code=400, detail="Not a fish or seafood")
                 
                 # Fetch Real Market Price
                 if "seafoodType" in data:
@@ -150,6 +154,9 @@ async def _analyze_single_fish(image: UploadFile, length_val: float) -> dict:
         
         clean_result = result_str.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_result)
+        
+        if data.get("is_fish") is False:
+            raise HTTPException(status_code=400, detail="Not a fish or seafood")
         
         # Ensure calculated fields
         if "seafoodType" in data:

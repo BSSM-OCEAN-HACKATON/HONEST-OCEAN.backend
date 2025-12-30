@@ -30,7 +30,8 @@ def analyze_with_gemini(image_path, api_key, fish_length=None):
         prompt = (
             "이 이미지를 분석하여 어종을 식별해 주세요. 대부분의 이미지는 한국 어시장에서 흔히 볼 수 있는 어종입니다. "
             f"{length_info} "
-            "결과를 다음 키를 가진 JSON 객체로 반환해 주세요: "
+            "만약 이미지가 물고기나 해산물이 아니라면 'is_fish': false 만 반환하세요. "
+            "물고기가 맞다면 'is_fish': true 와 함께 결과를 다음 키를 가진 JSON 객체로 반환해 주세요: "
             "'scientific_name'(학명, string), 'seafoodType'(어종, string), 'marketPrice'(원 단위 예상 싯가, integer), 'estimatedWeight'(kg 단위 예상 무게, number). "
             "싯가와 무게는 주어진 길이와 어종의 일반적인 특성을 바탕으로 추정해 주세요. "
             "JSON 형식만 반환하세요."
@@ -85,7 +86,8 @@ def analyze_with_gpt(image_path, api_key, fish_length=None):
     prompt = (
         "이 이미지를 분석하여 어종을 식별해 주세요. 대부분의 이미지는 한국 어시장에서 흔히 볼 수 있는 어종입니다. "
         f"{length_info} "
-        "결과를 다음 키를 가진 JSON 객체로 반환해 주세요: "
+        "만약 이미지가 물고기나 해산물이 아니라면 'is_fish': false 만 반환하세요. "
+        "물고기가 맞다면 'is_fish': true 와 함께 결과를 다음 키를 가진 JSON 객체로 반환해 주세요: "
         "'scientific_name'(학명, string), 'seafoodType'(어종, string), 'marketPrice'(원 단위 예상 싯가, integer), 'estimatedWeight'(kg 단위 예상 무게, number). "
         "싯가와 무게는 주어진 길이와 어종의 일반적인 특성을 바탕으로 추정해 주세요."
     )
