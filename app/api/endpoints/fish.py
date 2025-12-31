@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import JSONResponse
 import shutil
 import os
@@ -97,6 +97,8 @@ async def analyze_fish(
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -129,6 +131,8 @@ async def compare_fillet(
             "maxFIsh": max_idx,
             "portion": portion
         }
+    except HTTPException:
+         raise
     except Exception as e:
          import traceback
          traceback.print_exc()
@@ -196,3 +200,37 @@ async def _analyze_single_fish(image: UploadFile, length_val: float) -> dict:
     finally:
         if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
+
+@router.get("/test")
+async def get_mock_test_data(
+    id: Optional[str] = Query(None, description="1=고등어, 2=게, 3=대문어(금지체장 걸리게)")
+):
+    if id == "1":
+        return {
+            "seafoodType": "고등어",
+            "marketPrice": 30000,
+            "estimatedWeight": 0.5,
+            "currentlyForbidden": False
+        }
+    elif id == "2":
+         return {
+            "seafoodType": "꽃게",
+            "marketPrice": 25000,
+            "estimatedWeight": 0.4,
+            "currentlyForbidden": False
+        }
+    elif id == "3":
+         return {
+            "seafoodType": "대문어",
+            "marketPrice": 50000,
+            "estimatedWeight": 0.5,
+            "currentlyForbidden": True
+        }
+    else:
+        # Default fallback (same as case 1)
+        return {
+            "seafoodType": "고등어",
+            "marketPrice": 30000,
+            "estimatedWeight": 0.5,
+            "currentlyForbidden": False
+        }
